@@ -14,7 +14,6 @@ var sensitiveFieldNames = []string{
 	`azurerm-account-key`,
 	`client[_|/-](.[\w\s_/-]+)*key`,
 	`contrasena`,
-	`contraseña`,
 	`database[_|/-|\s](.[\w\s_/-]+)*key`,
 	`database[_|/-|\s](.[\w\s_/-]+)*pass`,
 	`database[_|/-|\s](.[\w\s_/-]+)*password`,
