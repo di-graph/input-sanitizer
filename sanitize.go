@@ -37,11 +37,7 @@ var sensitiveFieldNames = []string{
 func SanitizeValuesByKey(content []byte) ([]byte, error) {
 	for i := range sensitiveFieldNames {
 		filter := sensitiveFieldNames[i]
-		r, err := regexp.Compile(fmt.Sprintf(`(?:\"|\')(?P<key>(%s)+)(?:\"|\')(?:\:\s*)(?:\"|\')?(?P<value>[\w\s-\[\]]*)(?:\"|\')?`, filter))
-		if err != nil {
-			fmt.Printf("error in regex %s", err.Error())
-			return nil, err
-		}
+		r := regexp.MustCompile(fmt.Sprintf(`(?:\"|\')(?P<key>(%s)+)(?:\"|\')(?:\:\s*)(?:\"|\')?(?P<value>[\w\s-\[\]]*)(?:\"|\')?`, filter))
 		template := fmt.Sprintf("\"$key\":\"%s\"", sanitize_replacement_string)
 		content = r.ReplaceAll(content, []byte(template))
 	}
