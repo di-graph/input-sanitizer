@@ -70,3 +70,62 @@ func TestSpecificSensitiveKey(t *testing.T) {
 		})
 	}
 }
+
+const secretObject = `{
+"template": [
+	{
+	  "containers": [
+		{
+		  "args": null,
+		  "command": null,
+		  "env": [],
+		  "image": "gcr.io/digraph-2021/cloudquery-cloudrun@sha256:latest",
+		  "liveness_probe": [],
+		  "name": null,
+		  "ports": [],
+		  "volume_mounts": [
+			{
+			  "mount_path": "/secrets",
+			  "name": "secrets"
+			}
+		  ],
+		  "working_dir": null
+		}
+	  ],
+	  "encryption_key": null,
+	  "max_retries": 3,
+	  "volumes": [
+		{
+		  "cloud_sql_instance": [],
+		  "name": "secrets",
+		  "secret": [
+			{
+			  "default_mode": null,
+			  "items": [
+				{
+				  "mode": 256,
+				  "path": "config.yml",
+				  "version": "1"
+				}
+			  ],
+			  "secret": "cloudquery_config_src_gcloud_dst_gcs"
+			}
+		  ]
+		}
+	  ],
+	  "vpc_access": []
+	}
+  ]
+}`
+
+func TestSanitizeSecrets(t *testing.T) {
+	jsonBytes := []byte(secretObject)
+	sanitizedValues, err := inputsanitizer.SanitizeValuesByKey(jsonBytes)
+	var results map[string]interface{}
+	json.Unmarshal(sanitizedValues, &results)
+	assert.Nil(t, err)
+	template := results["template"].([]interface{})[0].(map[string]interface{})
+	volumes := template["volumes"].([]interface{})[0].(map[string]interface{})
+	secret := volumes["secret"].(string)
+	assert.Equal(t, "REDACTED", secret)
+}

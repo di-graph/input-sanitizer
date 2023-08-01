@@ -1,6 +1,7 @@
 package inputsanitizer
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 )
@@ -39,14 +40,57 @@ func init() {
 }
 
 func constructSensitiveRegExp(filter string) *regexp.Regexp {
-	filterString := fmt.Sprintf(`(?:\"|\')(?P<key>(%s)+)(?:\"|\')(?:\:\s*)(?:\"|\')?(?P<value>[\w\s-\[\]]*)(?:\"|\')?`, filter)
+	filterString := fmt.Sprintf(`(?i)\b%s\b`, filter)
 	return regexp.MustCompile(filterString)
 }
 
 func SanitizeValuesByKey(content []byte) ([]byte, error) {
-	for _, sensitiveRegExp := range preCompiledRegExpList {
-		template := fmt.Sprintf("\"$key\":\"%s\"", sanitize_replacement_string)
-		content = sensitiveRegExp.ReplaceAll(content, []byte(template))
+	sanitizedJSON, err := redactJSON(content)
+	if err != nil {
+		return nil, err
 	}
-	return content, nil
+	return []byte(sanitizedJSON), nil
+}
+
+func redactJSON(inputJSON []byte) (string, error) {
+	var data interface{}
+	err := json.Unmarshal(inputJSON, &data)
+	if err != nil {
+		return "", err
+	}
+
+	redactSensitiveData(data)
+
+	redactedJSON, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return string(redactedJSON), nil
+}
+
+func redactSensitiveData(data interface{}) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, val := range v {
+			if shouldRedact(key) {
+				v[key] = sanitize_replacement_string
+			} else {
+				redactSensitiveData(val)
+			}
+		}
+	case []interface{}:
+		for _, val := range v {
+			redactSensitiveData(val)
+		}
+	}
+}
+
+func shouldRedact(key string) bool {
+	for _, regex := range preCompiledRegExpList {
+		if regex.MatchString(key) {
+			return true
+		}
+	}
+	return false
 }
